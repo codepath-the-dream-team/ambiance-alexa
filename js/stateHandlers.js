@@ -79,8 +79,8 @@ var stateHandlers = {
             var reprompt;
             //if (this.attributes['playbackFinished']) {
                 this.handler.state = constants.states.START_MODE;
-                message = 'Welcome to the Ambient Sound. You can say, play the audio to begin the podcast.';
-                reprompt = 'You can say, play the audio, to begin.';
+                message = 'Welcome to the Ambient Sound. You can say, start, to begin.';
+                reprompt = 'You can say, start, to begin.';
             //}
 
             this.response.speak(message).listen(reprompt);
@@ -100,7 +100,7 @@ var stateHandlers = {
         'AMAZON.StartOverIntent' : function () { controller.startOver.call(this) },
         'AMAZON.HelpIntent' : function () {
             // This will called while audio is playing and a user says "ask <invocation_name> for help"
-            var message = 'You are listening to the Ambient Sound. You can say, Next or Previous to navigate through the playlist. ' +
+            var message = 'You are listening to the Ambient Sound. You can say, start, to begin, stop, to end.' +
                 'At any time, you can say Pause to pause the audio and Resume to resume.';
             this.response.speak(message).listen(message);
             this.emit(':responseReady');
@@ -109,7 +109,7 @@ var stateHandlers = {
             // No session ended logic
         },
         'Unhandled' : function () {
-            var message = 'Sorry, I could not understand. You can say, Next or Previous to navigate through the playlist.';
+            var message = 'Sorry, I could not understand. You can say, start, to begin, stop, to end.';
             this.response.speak(message).listen(message);
             this.emit(':responseReady');
         }
