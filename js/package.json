@@ -1,0 +1,26 @@
+{
+  "name": "ambiance-alexa",
+  "version": "1.0.0",
+  "description": "Ambiant alarm clock.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "alexa",
+    "skill",
+    "audio player"
+  ],
+  "author": "Amazon.com",
+  "license": "See license in ../LICENSE.txt",
+  "dependencies": {
+    "alexa-sdk": "^1.0.4",
+    "facebook-node": "0.0.3",
+    "tiny-facebook-wrapper": "0.0.7",
+    "parse": "1.9.2"
+  },
+  "repository" : {
+    "type" : "git",
+    "url" : "https://github.com/codepath-the-dream-team/ambiance-alexa.git"
+  }
+}
