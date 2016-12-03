@@ -1,0 +1,16 @@
+{
+  "intents": [
+    {
+      "intent": "AmbientAlarmStart",
+      "slots": []
+    },
+    {
+      "intent": "AmbientAlarmSnooze",
+      "slots": []
+    },
+    {
+      "intent": "AmbientAlarmStop",
+      "slots": []
+    }
+  ]
+}
