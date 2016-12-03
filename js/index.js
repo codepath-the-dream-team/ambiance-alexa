@@ -76,8 +76,15 @@ function onIntent(intentRequest, session, callback) {
         intentName = intentRequest.intent.name;
 
     // Dispatch to your skill's intent handlers
-    if ("HelpIntent" === intentName) {
-    } else {
+    if ("AmbientAlarmStart" === intentName) {
+        getIntentResponse('start', callback);
+    } else if ("AmbientAlarmStop" === intentName) {
+        getIntentResponse('stop', callback);
+    } else if ("AmbientAlarmSnooze" === intentName) {
+        getIntentResponse('snooze', callback);
+    } else if ("HelpIntent" === intentName) {
+        getWelcomeResponse(callback);
+    }else{
         throw "Invalid intent";
     }
 }
@@ -100,23 +107,31 @@ function getWelcomeResponse(callback) {
 
     var sessionAttributes = {};
     var repromptText = null;
+    var cardTitle = "Ambient Alarm Push Notification";
+    var speechOutput = "Welcome to Ambient Alarm.  You can say start, to begin, or stop, to end.";
+    var shouldEndSession = true;
 
-    var cardTitle = "AmbiantAlarm Push Notification";
-
-    //test http post
-    testPost(function (response) {
-
-        var speechOutput = "Response status is " + response;
-        var shouldEndSession = true;
-
-        callback(sessionAttributes,
-                 buildSpeechletResponse(cardTitle, speechOutput, repromptText, shouldEndSession));
-
-    });
-
+    callback(sessionAttributes,
+        buildSpeechletResponse(cardTitle, speechOutput, repromptText, shouldEndSession));
 }
 
-function testPost(response) {
+function getIntentResponse(command, callback) {
+
+    var sessionAttributes = {};
+    var repromptText = null;
+    var cardTitle = "Ambient Alarm Push Notification";
+
+    postPushNotification(command, function (response) {
+
+        var speechOutput = ""; //Response status is " + response;
+        var shouldEndSession = true;
+        callback(sessionAttributes,
+            buildSpeechletResponse(cardTitle, speechOutput, repromptText, shouldEndSession));
+
+    });
+}
+
+function postPushNotification(command, response) {
 
     var http = require('http');
     var postData = JSON.stringify({
@@ -134,7 +149,7 @@ function testPost(response) {
           },
           "data": {
             "title": "Ambient Alarm",
-            "alert": "start"
+            "alert": command
           }
     });
     var options = {
@@ -147,21 +162,6 @@ function testPost(response) {
           'X-Parse-Application-Id' : 'SXQu86CkKMYI3iuKhJHCQqCGtws3vT3c9eWE9WO2'
         }
     };
-    /**
-    var http = require('http');
-    var options = {
-        host: 'www.bing.com',
-        port: 80,
-        path: '/',
-        agent: false,
-        method: 'POST',
-        headers: {
-            'Content-Type' : 'application/json',
-            'X-Parse-Master-Key' : 'PvZSZ25V4sgYMmEOpWIfaCQCwLSWNWIvgbYmq6ZD',
-            'X-Parse-Application-Id' : 'SXQu86CkKMYI3iuKhJHCQqCGtws3vT3c9eWE9WO2'
-        }
-    };
-     **/
 
     var req = http.request(options, function (res) {
         console.log("Response: " + res.statusCode);
@@ -177,31 +177,7 @@ function testPost(response) {
    // write data to request body
     req.write(postData);
     req.end();
-    //response("Done writing data.");
 }
-
-/**
-
-function testGet(response) {
-
-    var http = require('http');
-    var options = {
-        host: 'www.bing.com',
-        port: 80,
-        path: '/',
-        agent: false
-    };
-
-    http.get(options, function (res) {
-        console.log("Response: " + res.statusCode);
-        response(res.statusCode);
-    }).on('error', function (e) {
-        console.log("Error message: " + e.message);
-    });
-
-}
-
-**/
 
 // --------------- Helpers that build all of the responses -----------------------
 
