@@ -7,6 +7,10 @@
 
 // Route the incoming request based on type (LaunchRequest, IntentRequest,
 // etc.) The JSON body of the request is provided in the event parameter.
+
+// iOS token to send push notification to.
+var deviceToken = "39fc6c2a3583b080f5708c0482b1e5ae925c5c44dedbf480117869cff9401fb8";
+
 exports.handler = function (event, context) {
     try {
         console.log("event.session.application.applicationId=" + event.session.application.applicationId);
@@ -138,7 +142,7 @@ function postPushNotification(command, response) {
           "where": {
             "deviceToken" : {
               "$in" : [
-               "39fc6c2a3583b080f5708c0482b1e5ae925c5c44dedbf480117869cff9401fb8"
+                deviceToken
               ]
             },
             "deviceType": {
