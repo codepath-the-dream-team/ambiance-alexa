@@ -113,7 +113,7 @@ function getWelcomeResponse(callback) {
     var repromptText = null;
     var cardTitle = "Ambient Alarm Push Notification";
     var speechOutput = "Welcome to Ambient Alarm.  You can say start, to begin, or stop, to end.";
-    var shouldEndSession = true;
+    var shouldEndSession = false;
 
     callback(sessionAttributes,
         buildSpeechletResponse(cardTitle, speechOutput, repromptText, shouldEndSession));
