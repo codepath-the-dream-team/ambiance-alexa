@@ -9,7 +9,7 @@
 // etc.) The JSON body of the request is provided in the event parameter.
 
 // iOS token to send push notification to.
-var deviceToken = "39fc6c2a3583b080f5708c0482b1e5ae925c5c44dedbf480117869cff9401fb8";
+//var deviceToken = "9c92c7f6236732b1e95a800c070b32754666c74f952ab367985d108d47d78f4d";
 
 exports.handler = function (event, context) {
     try {
@@ -74,18 +74,19 @@ function onLaunch(launchRequest, session, callback) {
  */
 function onIntent(intentRequest, session, callback) {
     console.log("onIntent requestId=" + intentRequest.requestId
-                + ", sessionId=" + session.sessionId);
+                + ", sessionId=" + session.sessionId
+                + ", accessToken=" + session.user.accessToken);
 
     var intent = intentRequest.intent,
         intentName = intentRequest.intent.name;
 
     // Dispatch to your skill's intent handlers
     if ("AmbientAlarmStart" === intentName) {
-        getIntentResponse('start', callback);
+        getIntentResponse('start', callback, session.user.accessToken);
     } else if ("AmbientAlarmStop" === intentName) {
-        getIntentResponse('stop', callback);
+        getIntentResponse('stop', callback, session.user.accessToken);
     } else if ("AmbientAlarmSnooze" === intentName) {
-        getIntentResponse('snooze', callback);
+        getIntentResponse('snooze', callback, session.user.accessToken);
     } else if ("HelpIntent" === intentName) {
         getWelcomeResponse(callback);
     }else{
@@ -119,25 +120,127 @@ function getWelcomeResponse(callback) {
         buildSpeechletResponse(cardTitle, speechOutput, repromptText, shouldEndSession));
 }
 
-function getIntentResponse(command, callback) {
+function getIntentResponse(command, callback, accessToken) {
 
     var sessionAttributes = {};
     var repromptText = null;
     var cardTitle = "Ambient Alarm Push Notification";
-
-    postPushNotification(command, function (response) {
-
-        var speechOutput = ""; //Response status is " + response;
+    var respondWithSpeech = function (speechOutput) {
         var shouldEndSession = true;
         callback(sessionAttributes,
             buildSpeechletResponse(cardTitle, speechOutput, repromptText, shouldEndSession));
+    };
 
+    startGettingFacebookId(accessToken, respondWithSpeech, command);
+}
+
+function startGettingFacebookId(accessToken, respondWithSpeech, pushCommand) {
+    getFacebookId(accessToken, function (response, responseObj) {
+        if (response != 200) {
+            respondWithSpeech("Facebook id retrieval failed");
+        } else {
+            var facebookId = responseObj.id;
+            console.log("facebook id is " + facebookId);
+            startGettingParseUserId(facebookId, respondWithSpeech, pushCommand)
+        }
     });
 }
 
-function postPushNotification(command, response) {
+function startGettingParseUserId(facebookId, respondWithSpeech, pushCommand) {
+    getParseUserId(facebookId, function (response, responseObj) {
+        if (response != 200) {
+            respondWithSpeech("Parse id retrieval failed");
+        } else {
+            var results = responseObj.results;
+            if (results && results[0] && results[0].objectId) {
+                var parseUserId = results[0].objectId;
+                console.log("Parse user id is " + parseUserId);
+                startGettingDeviceTokens(parseUserId, respondWithSpeech, pushCommand)
+            } else {
+                respondWithSpeech("Parse id retrieval failed");
+            }
+        }
+    });
+}
 
-    var http = require('http');
+function startGettingDeviceTokens(parseUserId, respondWithSpeech, pushCommand) {
+    getDeviceToken(parseUserId, function (response, responseObj) {
+        if (response != 200) {
+            respondWithSpeech("Device token retrieval failed");
+        } else {
+            var results = responseObj.results;
+            var deviceToken = null;
+            if (results && results.length > 0) {
+                var counter = results.length - 1;
+                for (; counter > 0; counter--) {
+                    var installationInfo = results[counter];
+                    if (installationInfo.deviceToken) {
+                        deviceToken = installationInfo.deviceToken;
+                        break;
+                    }
+                    counter--;
+                }
+            }
+            if (deviceToken) {
+                startPerformingPushNotification(deviceToken, respondWithSpeech, pushCommand);
+            } else {
+                respondWithSpeech("Could not find deviceToken");
+            }
+        }
+    });
+}
+
+function startPerformingPushNotification(deviceToken, respondWithSpeech, pushCommand) {
+    postPushNotification(pushCommand, deviceToken, function (response) {
+        if (response != 200) {
+            respondWithSpeech("Could not send " + command + " command.");
+        } else {
+            respondWithSpeech("Success.");
+        }
+    });
+}
+
+function getFacebookId(accessToken, callback) {
+    var options = {
+        host: 'graph.facebook.com',
+        path: '/me?access_token=' + accessToken,
+        method: 'GET',
+        headers: {
+            'Content-Type' : 'application/json'
+        }
+    };
+    callHttp(options, null, callback);
+}
+
+function getParseUserId(facebookId, callback) {
+    var options = {
+        host: 'codepath-ambiance.herokuapp.com',
+        path: '/parse/users/?where={"fbId":{"$in":["' + facebookId + '"]}}',
+        method: 'GET',
+        headers: {
+            'Content-Type' : 'application/json',
+            'X-Parse-Master-Key' : 'PvZSZ25V4sgYMmEOpWIfaCQCwLSWNWIvgbYmq6ZD',
+            'X-Parse-Application-Id' : 'SXQu86CkKMYI3iuKhJHCQqCGtws3vT3c9eWE9WO2'
+        }
+    };
+    callHttp(options, null, callback);
+}
+
+function getDeviceToken(parseUserId, callback) {
+    var options = {
+        host: 'codepath-ambiance.herokuapp.com',
+        path: '/parse/installations/?where={"user":{"__type":"Pointer","className":"_User","objectId":"' + parseUserId + '"}}&order=updatedAt',
+        method: 'GET',
+        headers: {
+            'Content-Type' : 'application/json',
+            'X-Parse-Master-Key' : 'PvZSZ25V4sgYMmEOpWIfaCQCwLSWNWIvgbYmq6ZD',
+            'X-Parse-Application-Id' : 'SXQu86CkKMYI3iuKhJHCQqCGtws3vT3c9eWE9WO2'
+        }
+    };
+    callHttp(options, null, callback);
+}
+
+function postPushNotification(command, deviceToken, callback) {
     var postData = JSON.stringify({
           "where": {
             "deviceToken" : {
@@ -166,22 +269,31 @@ function postPushNotification(command, response) {
           'X-Parse-Application-Id' : 'SXQu86CkKMYI3iuKhJHCQqCGtws3vT3c9eWE9WO2'
         }
     };
+    callHttp(options, postData, callback);
+}
 
+function callHttp(options, postData, callback) {
+    var http = require('https');
+    var httpResponseOutput = '';
     var req = http.request(options, function (res) {
         console.log("Response: " + res.statusCode);
-        //response(res.statusCode);
         res.setEncoding('utf8');
         res.on('data', (chunk) => {
-            response(chunk);
-        });
-        res.on('end', () => {
-            console.log('No more data in response.');
-        });
+            httpResponseOutput += chunk;
     });
-   // write data to request body
-    req.write(postData);
+        res.on('end', () => {
+            var obj = JSON.parse(httpResponseOutput);
+        console.log("http call returned value ", httpResponseOutput);
+        console.log("response ", res.statusCode);
+        callback(res.statusCode, obj);
+    });
+    });
+    if (postData) {
+        req.write(postData)
+    }
     req.end();
 }
+
 
 // --------------- Helpers that build all of the responses -----------------------
 
