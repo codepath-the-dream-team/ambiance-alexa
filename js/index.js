@@ -120,6 +120,8 @@ function getWelcomeResponse(callback) {
         buildSpeechletResponse(cardTitle, speechOutput, repromptText, shouldEndSession));
 }
 
+var parseUserData = undefined;
+
 function getIntentResponse(command, callback, accessToken) {
 
     var sessionAttributes = {};
@@ -154,7 +156,9 @@ function startGettingParseUserId(facebookId, respondWithSpeech, pushCommand) {
             var results = responseObj.results;
             if (results && results[0] && results[0].objectId) {
                 var parseUserId = results[0].objectId;
+                parseUserData = results[0];
                 console.log("Parse user id is " + parseUserId);
+                console.log("FirstName is: " + parseUserData.firstName);
                 startGettingDeviceTokens(parseUserId, respondWithSpeech, pushCommand)
             } else {
                 respondWithSpeech("Parse id retrieval failed");
@@ -195,9 +199,24 @@ function startPerformingPushNotification(deviceToken, respondWithSpeech, pushCom
         if (response != 200) {
             respondWithSpeech("Could not send " + command + " command.");
         } else {
+            buildSuccessResponseSpeech(respondWithSpeech, pushCommand);
             respondWithSpeech("Success.");
         }
     });
+}
+
+function buildSuccessResponseSpeech(respondWithSpeech, pushCommand) {
+    if (parseUserData) {
+        var firstName = parseUserData.firstName;
+        var soundName = parseUserData.sleepConfiguration.soundName;
+        if (pushCommand == 'start') {
+            respondWithSpeech("Starting " + soundName + ".");
+        }
+        if (pushCommand == 'stop') {
+            respondWithSpeech("Stopped. Have a nice day, " + firstName + ".");
+        }
+    }
+    respondWithSpeech("Success.");
 }
 
 function getFacebookId(accessToken, callback) {
